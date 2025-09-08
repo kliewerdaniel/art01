@@ -178,7 +178,7 @@ The application supports the following mission-critical functions:
 
 ## ER Diagram Overview
 
-[eb2822f18a7feb8eb2359d0b6623e98f757480a62ba0895f3752102fbbc390a8.png]
+(eb2822f18a7feb8eb2359d0b6623e98f757480a62ba0895f3752102fbbc390a8.png)
 
 **Entities & Relationships**
 - Users: Mentor ↔ Participants, multiple Tasks & Projects  
