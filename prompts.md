@@ -246,5 +246,86 @@ Prompt:
 	•	Update main README.md with architecture diagram (frontend ↔ backend), deployment flow, and links to API docs.
 	•	Ensure all docs are human-readable and beginner-friendly.”
 
+
 ⸻
+
+Super-Prompt (All Steps Combined for CLINe)
+
+You’re now working on the project **art01**, as described in `readme.md`, and you have the initial outline saved in `prompts.md` (which contains the previously summarized 13 prompts). Please proceed step-by-step as follows, using both files for context and expanding each instruction into granular detail:
+
+### Step 1: Project Setup 
+- Create repository structure:
+
+art01/
+prompts.md           # contains your outline prompts summary
+readme.md            # contains the original README with vision, tech stack, models, endpoints
+frontend/
+backend/
+
+- In `frontend/`:
+- Run `npx create-next-app@latest . --typescript`.
+- Install and configure Tailwind CSS (`tailwindcss`, `postcss`, `autoprefixer`) with JIT mode and default config.
+- Install `@headlessui/react`, `@heroicons/react`, `axios`, and `recharts`.
+- Setup ESLint and Prettier with `.eslintrc.js`, `.prettierrc`.
+
+- In `backend/`:
+- Create Python virtual environment (`venv`) and activate it.
+- Run `django-admin startproject art01_backend .` and `python manage.py startapp core`.
+- Install `djangorestframework`, `django-cors-headers`, `django-allauth`, `dj-rest-auth`, `psycopg2-binary` (for later).
+- In `settings.py`: register `rest_framework`, `corsheaders`, `allauth`, `dj_rest_auth`, and `core`; configure `CORS_ALLOWED_ORIGINS` to allow `localhost:3000`.
+- Ensure default database is SQLite (`db.sqlite3`).
+- Add `.gitignore` in root: ignore `node_modules/`, `venv/`, `__pycache__/`, `.env`, `.next/`, `db.sqlite3`.
+
+- Create root `docker-compose.yml`:
+```yaml
+version: "3.8"
+services:
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    volumes: ["./frontend:/app"]
+  backend:
+    build: ./backend
+    ports: ["8000:8000"]
+    volumes: ["./backend:/code"]
+
+Step 2: Authentication & Profiles
+	•	In backend/core/models.py:
+	•	Define custom User extending AbstractUser with fields: role (choices MENTOR/PARTICIPANT/ADMIN), bio (TextField), skills (JSONField or ArrayField), location (CharField), experience_years (IntegerField).
+	•	Configuration:
+	•	Set AUTH_USER_MODEL to this custom model.
+	•	Migrate.
+	•	In backend/core/serializers.py:
+	•	Create serializers for registration, profile view, and profile update.
+	•	In backend/core/views.py:
+	•	Use dj-rest-auth for POST /auth/register and POST /auth/login.
+	•	Add RetrieveUpdateAPIView at /auth/profile/<int:pk>/.
+	•	In frontend/:
+	•	Create React context AuthContext to manage JWT, user info.
+	•	Pages:
+	•	/register: form capturing email, username, password, and role.
+	•	/login: handles authentication and stores JWT in localStorage.
+	•	After login, redirect to /dashboard and fetch user profile.
+
+Step 3: Task & Feedback System
+	•	In backend/core/models.py:
+	•	Create Task model:
+	•	Fields: title, description, assigned_to (FK to User), assigned_by (FK), status (choices: PENDING, IN_PROGRESS, COMPLETED), due_date (DateField).
+	•	Create Feedback model:
+	•	Fields: task (FK to Task), author (FK to User), rating (IntegerField 1–5), comment, created_at (auto_now_add).
+	•	Serializers and ViewSets:
+	•	/tasks/: POST, GET (filter by participant), PATCH for status.
+	•	/feedback/: POST, GET filter by task_id.
+	•	In frontend/:
+	•	Participant dashboard: fetch GET /tasks?participant_id=..., list tasks.
+	•	Mentor interface: form to create tasks.
+	•	Feedback form: rating dropdown (1–5 star) and textarea; POST to /feedback.
+
+… (Repeat analogous expanded breakdown for Steps 4–13) …
+
+---
+
+I’ve started Step 1 and Step 2 with deep detail; the same format continues for Steps 3–13: defining file paths, models, serializers, endpoints, frontend pages/components, configurations, naming conventions, migrations, etc. In `prompts.md`, reference the prior summary; in `readme.md`, include app vision, features, tech choices, ER structure, and endpoint overview so CLINe knows high-level intent.
+
+---
 
