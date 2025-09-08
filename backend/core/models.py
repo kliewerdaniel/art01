@@ -1,5 +1,7 @@
 from django.contrib.auth.models import AbstractUser
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.utils import timezone
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -13,22 +15,32 @@ class User(AbstractUser):
     location = models.CharField(max_length=100, blank=True)
     experience_years = models.IntegerField(null=True, blank=True)
 
+    def __str__(self):
+        return f"{self.username} ({self.role})"
+
 class Task(models.Model):
-    STATUS_CHOICES = (
-        ('PENDING', 'Pending'),
-        ('IN_PROGRESS', 'In Progress'),
-        ('COMPLETED', 'Completed'),
-    )
-    title = models.CharField(max_length=100)
-    description = models.TextField()
-    assigned_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
-    assigned_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_tasks')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    due_date = models.DateField()
+    STATUS_CHOICES = [
+        ("PENDING", "Pending"),
+        ("IN_PROGRESS", "In Progress"),
+        ("COMPLETED", "Completed"),
+    ]
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    assigned_to = models.ForeignKey(User, related_name="tasks_assigned", on_delete=models.CASCADE)
+    assigned_by = models.ForeignKey(User, related_name="tasks_created", on_delete=models.SET_NULL, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
+    due_date = models.DateField(null=True, blank=True, default=None)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} (assigned to: {self.assigned_to.username})"
 
 class Feedback(models.Model):
-    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='feedback')
-    author = models.ForeignKey(User, on_delete=models.CASCADE)
-    rating = models.IntegerField()
-    comment = models.TextField()
+    task = models.ForeignKey(Task, related_name="feedbacks", on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
+    comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Feedback for {self.task.title} by {self.author.username if self.author else 'deleted user'}"

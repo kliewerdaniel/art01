@@ -2,14 +2,23 @@ from rest_framework import serializers
 from .models import User, Task, Feedback
 
 class TaskSerializer(serializers.ModelSerializer):
+    assigned_to_username = serializers.CharField(source='assigned_to.username', read_only=True)
+    assigned_by_username = serializers.CharField(source='assigned_by.username', read_only=True)
+
     class Meta:
         model = Task
-        fields = '__all__'
+        fields = ('id', 'title', 'description', 'assigned_to', 'assigned_to_username',
+                 'assigned_by', 'assigned_by_username', 'status', 'due_date', 'created_at')
 
 class FeedbackSerializer(serializers.ModelSerializer):
+    author_username = serializers.CharField(source='author.username', read_only=True)
+
     class Meta:
         model = Feedback
-        fields = '__all__'
+        fields = ('id', 'task', 'author', 'author_username', 'rating', 'comment', 'created_at')
+        extra_kwargs = {
+            'rating': {'min_value': 1, 'max_value': 5}
+        }
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     class Meta:

@@ -1,34 +1,83 @@
-from rest_framework import generics, viewsets
-from .models import User, Task, Feedback
-from .serializers import UserProfileSerializer, UserProfileUpdateSerializer, TaskSerializer, FeedbackSerializer
+from rest_framework import viewsets, status, generics
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from .models import Task, Feedback, User
+from .serializers import (
+    TaskSerializer, FeedbackSerializer,
+    UserProfileSerializer, UserProfileUpdateSerializer
+)
+from .permissions import IsMentorOrAdmin, IsMentorOrOwner, IsTaskParticipant
 
 class TaskViewSet(viewsets.ModelViewSet):
-    queryset = Task.objects.all()
+    queryset = Task.objects.all()  # Add default queryset
     serializer_class = TaskSerializer
-
+    permission_classes = [IsAuthenticated]
+    
     def get_queryset(self):
-        queryset = super().get_queryset()
-        participant_id = self.request.query_params.get('participant_id')
+        queryset = Task.objects.all()
+        participant_id = self.request.query_params.get('participant_id', None)
+        
         if participant_id:
             queryset = queryset.filter(assigned_to_id=participant_id)
-        return queryset
+        elif not self.request.user.role in ['MENTOR', 'ADMIN']:
+            # If not mentor/admin, only show own tasks
+            queryset = queryset.filter(assigned_to=self.request.user)
+            
+        return queryset.select_related('assigned_to', 'assigned_by')
+    
+    def get_permissions(self):
+        if self.action in ['create']:
+            return [IsAuthenticated(), IsMentorOrAdmin()]
+        return [IsAuthenticated(), IsMentorOrOwner()]
+    
+    def perform_create(self, serializer):
+        # If assigned_by not provided, set to request.user
+        if not serializer.validated_data.get('assigned_by'):
+            serializer.save(assigned_by=self.request.user)
+        else:
+            serializer.save()
+    
+    @action(detail=True, methods=['patch'])
+    def status(self, request, pk=None):
+        task = self.get_object()
+        status = request.data.get('status')
+        
+        if status not in dict(Task.STATUS_CHOICES):
+            return Response(
+                {'status': 'Invalid status value'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        task.status = status
+        task.save()
+        
+        serializer = self.get_serializer(task)
+        return Response(serializer.data)
 
 class FeedbackViewSet(viewsets.ModelViewSet):
-    queryset = Feedback.objects.all()
+    queryset = Feedback.objects.all()  # Add default queryset
     serializer_class = FeedbackSerializer
-
+    permission_classes = [IsAuthenticated, IsTaskParticipant]
+    
     def get_queryset(self):
-        queryset = super().get_queryset()
-        task_id = self.request.query_params.get('task_id')
+        queryset = Feedback.objects.all()
+        task_id = self.request.query_params.get('task_id', None)
+        
         if task_id:
             queryset = queryset.filter(task_id=task_id)
-        return queryset
+        
+        return queryset.select_related('author', 'task')
+    
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
     queryset = User.objects.all()
-    serializer_class = UserProfileSerializer
-
+    permission_classes = [IsAuthenticated]
+    
     def get_serializer_class(self):
-        if self.request.method == 'PUT' or self.request.method == 'PATCH':
+        if self.request.method in ['PUT', 'PATCH']:
             return UserProfileUpdateSerializer
         return UserProfileSerializer

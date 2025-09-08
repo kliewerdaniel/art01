@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import AuthContext from '../../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
 interface Task {
   id: number;
@@ -14,13 +14,13 @@ interface Task {
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const auth = useContext(AuthContext);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchTasks = async () => {
-      if (auth?.user) {
+      if (user) {
         try {
-          const response = await axios.get(`http://localhost:8000/tasks/?participant_id=${auth.user.id}`);
+          const response = await axios.get(`http://localhost:8000/tasks/?participant_id=${user.id}`);
           setTasks(response.data);
         } catch (error) {
           console.error(error);
@@ -28,7 +28,7 @@ export default function Dashboard() {
       }
     };
     fetchTasks();
-  }, [auth?.user]);
+  }, [user]);
 
   return (
     <div className="container p-4 mx-auto">

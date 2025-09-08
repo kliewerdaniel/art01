@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import AuthContext from '../../../../context/AuthContext';
+import { useAuth } from '../../../../context/AuthContext';
 
 export default function CreateTask() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const auth = useContext(AuthContext);
+  const { user } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,7 +20,7 @@ export default function CreateTask() {
         title,
         description,
         assigned_to: assignedTo,
-        assigned_by: auth?.user.id,
+        assigned_by: user?.id,
         due_date: dueDate,
       });
       router.push('/dashboard');

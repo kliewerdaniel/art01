@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import axios from 'axios';
-import AuthContext from '../context/AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface FeedbackFormProps {
   taskId: number;
@@ -11,14 +11,14 @@ interface FeedbackFormProps {
 export default function FeedbackForm({ taskId }: FeedbackFormProps) {
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const auth = useContext(AuthContext);
+  const { user } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await axios.post('http://localhost:8000/feedback/', {
         task: taskId,
-        author: auth?.user.id,
+        author: user?.id,
         rating,
         comment,
       });
