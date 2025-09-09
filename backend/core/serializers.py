@@ -1,5 +1,10 @@
 from rest_framework import serializers
-from .models import User, Task, Feedback
+from .models import User, Task, Feedback, Resource
+
+class ResourceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Resource
+        fields = '__all__'
 
 class TaskSerializer(serializers.ModelSerializer):
     assigned_to_username = serializers.CharField(source='assigned_to.username', read_only=True)

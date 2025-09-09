@@ -1,167 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '@/context/AuthContext';
+'use client';
 
-interface User {
-  id: number;
-  username: string;
-  role: string;
-}
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { api } from '@/lib/api';
+import { User } from '@/types';
 
 interface TaskCreateFormProps {
-  onSuccess?: () => void;
-  onCancel?: () => void;
+  participants: User[];
 }
 
-export const TaskCreateForm: React.FC<TaskCreateFormProps> = ({ onSuccess, onCancel }) => {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [assignedTo, setAssignedTo] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [participants, setParticipants] = useState<User[]>([]);
+const TaskCreateForm = ({ participants }: TaskCreateFormProps) => {
+  const { register, handleSubmit, reset } = useForm();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const { user } = useAuth();
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchParticipants = async () => {
-      try {
-        // Assuming there's an endpoint to fetch participants
-        const response = await axios.get('/api/users/?role=PARTICIPANT');
-        setParticipants(response.data);
-      } catch (err) {
-        console.error('Error fetching participants:', err);
-        setError('Failed to load participants');
-      }
-    };
-
-    fetchParticipants();
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title || !assignedTo) {
-      setError('Title and Assigned To are required');
-      return;
-    }
-
+  const onSubmit = async (data: any) => {
     setIsLoading(true);
-    setError('');
-
+    setError(null);
     try {
-      await axios.post('/api/tasks/', {
-        title,
-        description,
-        assigned_to: parseInt(assignedTo),
-        due_date: dueDate || null
-      });
-
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setAssignedTo('');
-      setDueDate('');
-      
-      onSuccess?.();
+      await api.post('/api/tasks/', data);
+      reset();
     } catch (err) {
-      console.error('Error creating task:', err);
-      setError('Failed to create task. Please try again.');
+      setError('Failed to create task');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Only mentors and admins should access this form
-  if (user?.role !== 'MENTOR' && user?.role !== 'ADMIN') {
-    return <div>Unauthorized access</div>;
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="title" className="block text-sm font-medium text-gray-700">
           Title
         </label>
         <input
-          type="text"
           id="title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          required
+          {...register('title', { required: true })}
+          className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"
         />
       </div>
-
       <div>
         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
           Description
         </label>
         <textarea
           id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={3}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          {...register('description')}
+          className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"
         />
       </div>
-
       <div>
-        <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="assigned_to" className="block text-sm font-medium text-gray-700">
           Assign To
         </label>
         <select
-          id="assignedTo"
-          value={assignedTo}
-          onChange={(e) => setAssignedTo(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-          required
+          id="assigned_to"
+          {...register('assigned_to', { required: true })}
+          className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"
         >
-          <option value="">Select a participant</option>
-          {participants.map((participant) => (
-            <option key={participant.id} value={participant.id}>
-              {participant.username}
+          {participants.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.username}
             </option>
           ))}
         </select>
       </div>
-
       <div>
-        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
-          Due Date (optional)
+        <label htmlFor="due_date" className="block text-sm font-medium text-gray-700">
+          Due Date
         </label>
         <input
+          id="due_date"
           type="date"
-          id="dueDate"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          {...register('due_date')}
+          className="block w-full mt-1 border-gray-300 rounded-md shadow-sm"
         />
       </div>
-
-      {error && (
-        <div className="text-red-600 text-sm">{error}</div>
-      )}
-
-      <div className="flex justify-end space-x-3">
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="px-4 py-2 border rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={`px-4 py-2 rounded-md bg-indigo-600 text-white hover:bg-indigo-700 ${
-            isLoading ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          {isLoading ? 'Creating...' : 'Create Task'}
-        </button>
-      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
+      <button
+        type="submit"
+        disabled={isLoading}
+        className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700"
+      >
+        {isLoading ? 'Creating...' : 'Create Task'}
+      </button>
     </form>
   );
 };
+
+export default TaskCreateForm;

@@ -3,10 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import Task, Feedback, User
+from .models import Task, Feedback, User, Resource
 from .serializers import (
     TaskSerializer, FeedbackSerializer,
-    UserProfileSerializer, UserProfileUpdateSerializer
+    UserProfileSerializer, UserProfileUpdateSerializer, ResourceSerializer
 )
 from .permissions import IsMentorOrAdmin, IsMentorOrOwner, IsTaskParticipant
 
@@ -81,3 +81,40 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
         if self.request.method in ['PUT', 'PATCH']:
             return UserProfileUpdateSerializer
         return UserProfileSerializer
+
+class ResourceViewSet(viewsets.ModelViewSet):
+    queryset = Resource.objects.all()
+    serializer_class = ResourceSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Resource.objects.all()
+        participant_id = self.request.query_params.get('participant_id')
+        if participant_id:
+            queryset = queryset.filter(assigned_to_id=participant_id)
+        return queryset
+
+    @action(detail=True, methods=['patch'])
+    def assign(self, request, pk=None):
+        resource = self.get_object()
+        participant_id = request.data.get('participant_id')
+        try:
+            participant = User.objects.get(id=participant_id, role='PARTICIPANT')
+            resource.assigned_to = participant
+            resource.status = 'IN_USE'
+            resource.save()
+            return Response(self.get_serializer(resource).data)
+        except User.DoesNotExist:
+            return Response({'error': 'Participant not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['patch'])
+    def status(self, request, pk=None):
+        resource = self.get_object()
+        status_val = request.data.get('status')
+        if status_val not in [choice[0] for choice in Resource.STATUS_CHOICES]:
+            return Response({'error': 'Invalid status'}, status=status.HTTP_400_BAD_REQUEST)
+        resource.status = status_val
+        if status_val == 'AVAILABLE':
+            resource.assigned_to = None
+        resource.save()
+        return Response(self.get_serializer(resource).data)

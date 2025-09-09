@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
+from django.conf import settings
 
 class User(AbstractUser):
     ROLE_CHOICES = (
@@ -44,3 +45,14 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback for {self.task.title} by {self.author.username if self.author else 'deleted user'}"
+
+
+class Resource(models.Model):
+    RESOURCE_TYPES = [("BOOK", "Book"), ("TOOL", "Tool"), ("MATERIAL", "Material"), ("DIGITAL", "Digital")]
+    STATUS_CHOICES = [("AVAILABLE", "Available"), ("IN_USE", "In Use"), ("RETURNED", "Returned")]
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    type = models.CharField(max_length=20, choices=RESOURCE_TYPES)
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="AVAILABLE")
+    created_at = models.DateTimeField(auto_now_add=True)
