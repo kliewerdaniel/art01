@@ -3,10 +3,11 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
-from .models import Task, Feedback, User, Resource
+from .models import Task, Feedback, User, Resource, Project
 from .serializers import (
     TaskSerializer, FeedbackSerializer,
-    UserProfileSerializer, UserProfileUpdateSerializer, ResourceSerializer
+    UserProfileSerializer, UserProfileUpdateSerializer, ResourceSerializer,
+    ProjectSerializer
 )
 from .permissions import IsMentorOrAdmin, IsMentorOrOwner, IsTaskParticipant
 
@@ -129,3 +130,30 @@ class ResourceViewSet(viewsets.ModelViewSet):
             resource.assigned_to = None
         resource.save()
         return Response(self.get_serializer(resource).data)
+
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    queryset = Project.objects.all()
+    serializer_class = ProjectSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        queryset = Project.objects.all()
+        marketplace = self.request.query_params.get('marketplace')
+        if marketplace:
+            queryset = queryset.filter(status='PUBLISHED')
+        return queryset
+
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def purchase(self, request, pk=None):
+        project = self.get_object()
+        if project.status != 'PUBLISHED':
+            return Response({'error': 'Project not available for purchase'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        project.status = 'SOLD'
+        project.buyer = request.user
+        project.save()
+        return Response(self.get_serializer(project).data)

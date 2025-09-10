@@ -56,3 +56,15 @@ class Resource(models.Model):
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="AVAILABLE")
     created_at = models.DateTimeField(auto_now_add=True)
+
+
+class Project(models.Model):
+    STATUS_CHOICES = [("DRAFT", "Draft"), ("PUBLISHED", "Published"), ("SOLD", "Sold")]
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='projects', on_delete=models.CASCADE)
+    media_url = models.URLField(max_length=2000)  # Cloudinary/S3 URL
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="DRAFT")
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    buyer = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, related_name='purchases', on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)

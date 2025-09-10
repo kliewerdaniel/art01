@@ -31,3 +31,15 @@ export interface User {
   location: string;
   experience_years: number;
 }
+
+export interface Project {
+  id: number;
+  title: string;
+  description: string;
+  owner: User;
+  media_url: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'SOLD';
+  price: number;
+  buyer?: User | null;
+  created_at: string;
+}
